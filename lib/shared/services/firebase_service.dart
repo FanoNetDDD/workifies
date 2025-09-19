@@ -6,6 +6,7 @@ import '../models/chat_models.dart';
 import '../models/user_model.dart';
 import '../models/company_model.dart';
 import '../models/attendance_model.dart';
+import '../models/task_model.dart';
 import 'dart:math';
 
 class FirebaseService {
@@ -115,6 +116,7 @@ class FirebaseService {
   static CollectionReference get attendance => _firestore.collection('attendance');
   static CollectionReference get conversations => _firestore.collection('conversations');
   static CollectionReference get messages => _firestore.collection('messages');
+  static CollectionReference get tasks => _firestore.collection('tasks');
 
   // User management
   static Future<void> createUserProfile({
@@ -655,5 +657,208 @@ class FirebaseService {
       print('Message data: ${message.data}');
       // Navigate to appropriate screen based on message data
     });
+  }
+
+  // Task management methods
+  static Future<String> createTask({
+    required String title,
+    required String description,
+    required TaskPriority priority,
+    required String assignedToId,
+    required String assignedToName,
+    required String createdById,
+    required String createdByName,
+    required String companyId,
+    DateTime? dueDate,
+  }) async {
+    final task = TaskModel(
+      id: '',
+      title: title,
+      description: description,
+      status: TaskStatus.pending,
+      priority: priority,
+      assignedToId: assignedToId,
+      assignedToName: assignedToName,
+      createdById: createdById,
+      createdByName: createdByName,
+      companyId: companyId,
+      dueDate: dueDate,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final docRef = await tasks.add(task.toJson());
+    return docRef.id;
+  }
+
+  static Future<void> updateTaskStatus({
+    required String taskId,
+    required TaskStatus status,
+    String? progressNote,
+  }) async {
+    final updateData = <String, dynamic>{
+      'status': status.name,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    if (progressNote != null && progressNote.isNotEmpty) {
+      final doc = await tasks.doc(taskId).get();
+      if (doc.exists) {
+        final taskData = doc.data() as Map<String, dynamic>;
+        final currentNotes = List<String>.from(taskData['progressNotes'] ?? []);
+        currentNotes.add('${DateTime.now().toIso8601String()}: $progressNote');
+        updateData['progressNotes'] = currentNotes;
+      }
+    }
+
+    await tasks.doc(taskId).update(updateData);
+  }
+
+  static Future<void> updateTask({
+    required String taskId,
+    String? title,
+    String? description,
+    TaskPriority? priority,
+    DateTime? dueDate,
+    String? progressNote,
+  }) async {
+    final updateData = <String, dynamic>{
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    if (title != null) updateData['title'] = title;
+    if (description != null) updateData['description'] = description;
+    if (priority != null) updateData['priority'] = priority.name;
+    if (dueDate != null) updateData['dueDate'] = dueDate.toIso8601String();
+
+    if (progressNote != null && progressNote.isNotEmpty) {
+      final doc = await tasks.doc(taskId).get();
+      if (doc.exists) {
+        final taskData = doc.data() as Map<String, dynamic>;
+        final currentNotes = List<String>.from(taskData['progressNotes'] ?? []);
+        currentNotes.add('${DateTime.now().toIso8601String()}: $progressNote');
+        updateData['progressNotes'] = currentNotes;
+      }
+    }
+
+    await tasks.doc(taskId).update(updateData);
+  }
+
+  static Future<void> deleteTask(String taskId) async {
+    await tasks.doc(taskId).delete();
+  }
+
+  static Future<TaskModel?> getTask(String taskId) async {
+    try {
+      final doc = await tasks.doc(taskId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return TaskModel.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  static Future<List<TaskModel>> getUserTasks({
+    required String userId,
+    TaskStatus? status,
+  }) async {
+    try {
+      Query query = tasks.where('assignedToId', isEqualTo: userId);
+
+      if (status != null) {
+        query = query.where('status', isEqualTo: status.name);
+      }
+
+      final querySnapshot = await query
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return TaskModel.fromJson(data);
+      }).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  static Future<List<TaskModel>> getCompanyTasks({
+    required String companyId,
+    TaskStatus? status,
+    String? assignedToId,
+  }) async {
+    try {
+      Query query = tasks.where('companyId', isEqualTo: companyId);
+
+      if (status != null) {
+        query = query.where('status', isEqualTo: status.name);
+      }
+
+      if (assignedToId != null) {
+        query = query.where('assignedToId', isEqualTo: assignedToId);
+      }
+
+      final querySnapshot = await query
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return TaskModel.fromJson(data);
+      }).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  static Stream<List<TaskModel>> getUserTasksStream({
+    required String userId,
+    TaskStatus? status,
+  }) {
+    Query query = tasks.where('assignedToId', isEqualTo: userId);
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status.name);
+    }
+
+    return query
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return TaskModel.fromJson(data);
+            }).toList());
+  }
+
+  static Stream<List<TaskModel>> getCompanyTasksStream({
+    required String companyId,
+    TaskStatus? status,
+    String? assignedToId,
+  }) {
+    Query query = tasks.where('companyId', isEqualTo: companyId);
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status.name);
+    }
+
+    if (assignedToId != null) {
+      query = query.where('assignedToId', isEqualTo: assignedToId);
+    }
+
+    return query
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return TaskModel.fromJson(data);
+            }).toList());
   }
 }

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'manager/employees_screen.dart';
 import 'manager/attendance_screen.dart';
+import 'manager/tasks_screen.dart';
 import 'manager/chat_screen.dart';
 import 'manager/settings_screen.dart';
 
@@ -20,6 +21,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     const _DashboardHome(),
     const EmployeesScreen(),
     const AttendanceScreen(),
+    const ManagerTasksScreen(),
     const ChatScreen(),
     const SettingsScreen(),
   ];
@@ -36,6 +38,10 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     BottomNavigationBarItem(
       icon: Icon(Icons.access_time),
       label: 'Attendance',
+    ),
+    BottomNavigationBarItem(
+      icon: Icon(Icons.task_alt),
+      label: 'Tasks',
     ),
     BottomNavigationBarItem(
       icon: Icon(Icons.chat),

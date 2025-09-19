@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'employee/my_hours_screen.dart';
+import 'employee/tasks_screen.dart';
 import 'employee/chat_screen.dart';
 import 'employee/profile_screen.dart';
 
@@ -19,6 +20,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
   final List<Widget> _pages = [
     const _HomePage(),
     const MyHoursScreen(),
+    const EmployeeTasksScreen(),
     const EmployeeChatScreen(),
     const ProfileScreen(),
   ];
@@ -41,6 +43,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.access_time),
             label: 'My Hours',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.task_alt),
+            label: 'Tasks',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat),
